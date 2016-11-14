@@ -13,5 +13,14 @@ include_directories(
     ${OGRE_INCLUDE_DIRS}
 )
 
-add_library(BtOgre STATIC BtOgre.cpp)
+add_library(BtOgre BtOgre.cpp)
 target_link_libraries(BtOgre ${BULLET_LIBRARIES} ${OGRE_LIBRARIES})
+
+install(TARGETS BtOgre
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+install(DIRECTORY include/ DESTINATION include/btogre
+    FILES_MATCHING PATTERN "*.h"
+)
