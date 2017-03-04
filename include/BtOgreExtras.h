@@ -217,9 +217,12 @@ public:
     void draw3dText(const btVector3 &location, const char *textString) override
     {
     }
+    
     void drawContactPoint(const btVector3 &PointOnB, const btVector3 &normalOnB, btScalar distance, int lifeTime, const btVector3 &color) override
     {
+	drawLine(PointOnB, PointOnB + normalOnB * distance * 20, color);
     }
+    
     void reportErrorWarning(const char *warningString) override
     {
         Ogre::LogManager::getSingleton().logMessage(warningString);
