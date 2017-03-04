@@ -99,15 +99,11 @@ public:
     void clear()
     {
         //There's only one object used to display the lines, but contact points and other geometrical shapes could be implemented in the same way
-        for (auto obj : objects)
-        {
-            //Ogre::LogManager::getSingleton().logMessage(Ogre::String("size : ") + std::to_string(objects.size()));
-            attachNode->detachObject(obj);
-            static auto smgr = Ogre::Root::getSingleton().getSceneManager(smgrName);
-            smgr->destroyMovableObject(obj, obj->getMovableType());
-        }
-        objects.clear();
-        lines.clear();
+	for (auto obj : objects)
+	{
+		obj->clear();
+	}
+	lines.clear();
     }
 
     void addLine(const Ogre::Vector3& start, const Ogre::Vector3& end, const Ogre::ColourValue& value)
@@ -132,29 +128,35 @@ public:
 
     void update()
     {
-        checkForMaterial();
-        static auto smgr = Ogre::Root::getSingleton().getSceneManager(smgrName);
-        int index = 0;
+	Ogre::ManualObject* manualObj;
+	if (!objects.empty())
+	{
+		manualObj = objects[0];
+	}
+	else
+	{
+		manualObj = smgr->createManualObject();
+		attachNode->attachObject(manualObj);
+		objects.push_back(manualObj);
+	}
 
-        auto manualObj = smgr->createManualObject();
-        manualObj->begin(datablockToUse, Ogre::OT_LINE_LIST);
-        for (const auto& l : lines)
-        {
-            manualObj->position(l.start);
-            manualObj->colour(l.vertexColor);
-            //manualObj->textureCoord(0, 0);
-            manualObj->index(index++);
+	manualObj->begin(datablockToUse, Ogre::OT_LINE_LIST);
+	
+	    for (const auto& l : lines)
+	{
+		manualObj->position(l.start);
+		manualObj->colour(l.vertexColor);
+		//manualObj->textureCoord(0, 0);
+		manualObj->index(index++);
 
-            manualObj->position(l.end);
-            manualObj->colour(l.vertexColor);
-            //manualObj->textureCoord(0, 0);
-            manualObj->index(index++);
-        }
+		manualObj->position(l.end);
+		manualObj->colour(l.vertexColor);
+		//manualObj->textureCoord(0, 0);
+		manualObj->index(index++);
+	}
 
-        manualObj->end();
-        manualObj->setCastShadows(false);
-        attachNode->attachObject(manualObj);
-        objects.push_back(manualObj);
+	manualObj->end();
+	manualObj->setCastShadows(false);
     }
 };
 
