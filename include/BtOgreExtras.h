@@ -133,7 +133,7 @@ public:
     void update()
     {
         checkForMaterial();
-        static auto smgr = Ogre::Root::getSingleton().getSceneManager("ANN_MAIN_SMGR");
+        static auto smgr = Ogre::Root::getSingleton().getSceneManager(smgrName);
         int index = 0;
 
         auto manualObj = smgr->createManualObject();
