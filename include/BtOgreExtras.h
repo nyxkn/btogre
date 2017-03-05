@@ -60,210 +60,198 @@ public:
 
 //From here on its debug-drawing stuff. ------------------------------------------------------------------
 
-//Draw the lines Bullet want's you to draw
-class LineDrawer
-{
-    Ogre::String sceneManagerName;
-    ///How a line is stored
-    struct line
-    {
-        Ogre::Vector3 start;
-        Ogre::Vector3 end;
-        Ogre::ColourValue vertexColor;
-    };
-
-    ///Where the created objects will be attached
-    Ogre::SceneNode* attachNode;
-
-    ///The name of the HLMS datablock to use
-    Ogre::String datablockToUse;
-
-    ///Array of lines and objects to use
-    std::vector<Ogre::ManualObject*> objects;
-    std::vector<line> lines;
-
-    ///TODO define something for the contatct points
-
-public:
-    LineDrawer(Ogre::SceneNode* node, Ogre::String datablockId, Ogre::String smgrName) :
-        attachNode(node),
-        sceneManagerName(smgrName)
-    {
-    }
-
-    ~LineDrawer()
-    {
-        clear();
-    }
-
-    void clear()
-    {
-        //There's only one object used to display the lines, but contact points and other geometrical shapes could be implemented in the same way
-	for (auto obj : objects)
+	//Draw the lines Bullet want's you to draw
+	class LineDrawer
 	{
-		obj->clear();
-	}
-	lines.clear();
-    }
+		Ogre::String sceneManagerName;
+		///How a line is stored
+		struct line
+		{
+			Ogre::Vector3 start;
+			Ogre::Vector3 end;
+			Ogre::ColourValue vertexColor;
+		};
 
-    void addLine(const Ogre::Vector3& start, const Ogre::Vector3& end, const Ogre::ColourValue& value)
-    {
-        lines.push_back({ start, end, value });
-    }
+		///Where the created objects will be attached
+		Ogre::SceneNode* attachNode;
 
-    void checkForMaterial()
-    {
-        Ogre::HlmsUnlit* hlmsUnlit = (Ogre::HlmsUnlit*) Ogre::Root::getSingleton().getHlmsManager()->getHlms(Ogre::HLMS_UNLIT);
-        auto datablock = hlmsUnlit->getDatablock(datablockToUse);
+		///The name of the HLMS datablock to use
+		Ogre::String datablockToUse;
 
-        if (datablock) return;
-        Ogre::LogManager::getSingleton().logMessage("BtOgre's datablock not found, creating...");
-        auto createdDatablock = hlmsUnlit->createDatablock(datablockToUse, datablockToUse, Ogre::HlmsMacroblock(), Ogre::HlmsBlendblock(), Ogre::HlmsParamVec(), true, Ogre::BLANKSTRING, "BtOgre");
+		///Array of lines and objects to use
+		//std::vector<Ogre::ManualObject*> objects;
+		Ogre::ManualObject* manualObject;
+		std::vector<line> lines;
 
-        if (!createdDatablock)
-        {
-            Ogre::LogManager().logMessage("Mh. Datablock hasn't been created. Weird.");
-        }
-    }
+		Ogre::SceneManager* smgr;
 
-    void update()
-    {
-	Ogre::ManualObject* manualObj;
-	if (!objects.empty())
+		int index;
+
+	public:
+		LineDrawer(Ogre::SceneNode* node, Ogre::String datablockId, Ogre::String smgrName) :
+			attachNode(node), index(0),
+			sceneManagerName(smgrName)
+		{
+			smgr = Ogre::Root::getSingleton().getSceneManager(sceneManagerName);
+		}
+
+		~LineDrawer()
+		{
+			clear();
+		}
+
+		void clear()
+		{
+			if (manualObject) manualObject->clear();
+			lines.clear();
+		}
+
+		void addLine(const Ogre::Vector3& start, const Ogre::Vector3& end, const Ogre::ColourValue& value)
+		{
+			lines.push_back({ start, end, value });
+		}
+
+		void checkForMaterial()
+		{
+			Ogre::HlmsUnlit* hlmsUnlit = (Ogre::HlmsUnlit*) Ogre::Root::getSingleton().getHlmsManager()->getHlms(Ogre::HLMS_UNLIT);
+			auto datablock = hlmsUnlit->getDatablock(datablockToUse);
+
+			if (datablock) return;
+			Ogre::LogManager::getSingleton().logMessage("BtOgre's datablock not found, creating...");
+			auto createdDatablock = hlmsUnlit->createDatablock(datablockToUse, datablockToUse, Ogre::HlmsMacroblock(), Ogre::HlmsBlendblock(), Ogre::HlmsParamVec(), true, Ogre::BLANKSTRING, "BtOgre");
+
+			if (!createdDatablock)
+			{
+				Ogre::LogManager().logMessage("Mh. Datablock hasn't been created. Weird.");
+			}
+		}
+
+		void update()
+		{
+			if (!manualObject)
+			{
+				manualObject = smgr->createManualObject(Ogre::SCENE_STATIC);
+				attachNode->attachObject(manualObject);
+			}
+
+			checkForMaterial();
+			manualObject->begin(datablockToUse, Ogre::OT_LINE_LIST);
+			index = 0;
+			for (const auto& l : lines)
+			{
+				manualObject->position(l.start);
+				manualObject->colour(l.vertexColor);
+				manualObject->index(index++);
+
+				manualObject->position(l.end);
+				manualObject->colour(l.vertexColor);
+				manualObject->index(index++);
+			}
+
+			manualObject->end();
+			manualObject->setCastShadows(false);
+		}
+	};
+
+	class DebugDrawer : public btIDebugDraw
 	{
-		manualObj = objects[0];
-	}
-	else
-	{
-		manualObj = smgr->createManualObject();
-		attachNode->attachObject(manualObj);
-		objects.push_back(manualObj);
-	}
+	protected:
+		Ogre::SceneNode *mNode;
+		btDynamicsWorld *mWorld;
+		int mDebugOn;
+		static constexpr char* unlitDatablockName{ "DebugLinesGenerated" };
+		const Ogre::IdString unlitDatablockId;
 
-	manualObj->begin(datablockToUse, Ogre::OT_LINE_LIST);
-	
-	    for (const auto& l : lines)
-	{
-		manualObj->position(l.start);
-		manualObj->colour(l.vertexColor);
-		manualObj->index(index++);
+		//To accommodate the diffuse color -> light value "change" of meaning of the color of a fragment in HDR pipelines, multiply all colors by this value
+		float unlitDiffuseMultiplier;
 
-		manualObj->position(l.end);
-		manualObj->colour(l.vertexColor);
-		manualObj->index(index++);
-	}
+		bool stepped;
+		Ogre::String scene;
+		LineDrawer drawer;
 
-	manualObj->end();
-	manualObj->setCastShadows(false);
-    }
-};
+	public:
+		DebugDrawer(Ogre::SceneNode* node, btDynamicsWorld* world, Ogre::String smgrName = "MAIN_SMGR") :
+			mNode(node->createChildSceneNode(Ogre::SCENE_STATIC)),
+			mWorld(world),
+			mDebugOn(true),
+			unlitDatablockId(unlitDatablockName),
+			unlitDiffuseMultiplier(200.0f),
+			stepped(false),
+			scene(smgrName),
+			drawer(mNode, unlitDatablockName, scene)
+		{
+			if (!Ogre::ResourceGroupManager::getSingleton().resourceGroupExists("BtOgre"))
+				Ogre::ResourceGroupManager::getSingleton().createResourceGroup("BtOgre");
+		}
 
-class DebugDrawer : public btIDebugDraw
-{
-protected:
-    Ogre::SceneNode *mNode;
-    btDynamicsWorld *mWorld;
-    int mDebugOn;
-    static constexpr char* unlitDatablockName{ "DebugLinesGenerated" };
-    const Ogre::IdString unlitDatablockId;
+		~DebugDrawer()
+		{
+		}
 
-    //To accommodate the diffuse color -> light value "change" of meaning of the color of a fragment in HDR pipelines, multiply all colors by this value
-    float unlitDiffuseMultiplier;
+		void setUnlitDiffuseMultiplier(float value)
+		{
+			if (value >= 1) unlitDiffuseMultiplier = value;
+		}
 
-    bool stepped;
-    Ogre::String scene;
-    LineDrawer drawer;
+		void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override
+		{
+			if (stepped)
+			{
+				drawer.clear();
+				stepped = false;
+			}
 
-public:
-    DebugDrawer(Ogre::SceneNode* node, btDynamicsWorld* world, Ogre::String smgrName = "MAIN_SMGR") :
-        mNode(node->createChildSceneNode()),
-        mWorld(world),
-        mDebugOn(true),
-        unlitDatablockId(unlitDatablockName),
-        unlitDiffuseMultiplier(200.0f),
-        stepped(false),
-        scene(smgrName),
-        drawer(mNode, unlitDatablockName, scene)
-    {
-        if (!Ogre::ResourceGroupManager::getSingleton().resourceGroupExists("BtOgre"))
-            Ogre::ResourceGroupManager::getSingleton().createResourceGroup("BtOgre");
-    }
+			auto ogreFrom = Convert::toOgre(from);
+			auto ogreTo = Convert::toOgre(to);
+			Ogre::ColourValue ogreColor(color.x(), color.y(), color.z(), 1);
+			ogreColor *= unlitDiffuseMultiplier;
 
-    ~DebugDrawer()
-    {
-    }
-    
-    void setUnlitDiffuseMultiplier(float value)
-    {
-    	if(value >= 1) unlitDiffuseMultiplier = value;
-    }
-    
+			drawer.addLine(ogreFrom, ogreTo, ogreColor);
+		}
 
-    void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override
-    {
-        if (stepped)
-        {
-            drawer.clear();
-            stepped = false;
-        }
+		void draw3dText(const btVector3 &location, const char *textString) override
+		{
+		}
 
-        auto ogreFrom = Convert::toOgre(from);
-        auto ogreTo = Convert::toOgre(to);
-        Ogre::ColourValue ogreColor(color.x(), color.y(), color.z(), 1);
-        ogreColor *= unlitDiffuseMultiplier;
+		void drawContactPoint(const btVector3 &PointOnB, const btVector3 &normalOnB, btScalar distance, int lifeTime, const btVector3 &color) override
+		{
+			drawLine(PointOnB, PointOnB + normalOnB * distance * 20, color);
+		}
 
-        drawer.addLine(ogreFrom, ogreTo, ogreColor);
-    }
+		void reportErrorWarning(const char *warningString) override
+		{
+			Ogre::LogManager::getSingleton().logMessage(warningString);
+		}
 
-    void draw3dText(const btVector3 &location, const char *textString) override
-    {
-    }
-    
-    void drawContactPoint(const btVector3 &PointOnB, const btVector3 &normalOnB, btScalar distance, int lifeTime, const btVector3 &color) override
-    {
-	drawLine(PointOnB, PointOnB + normalOnB * distance * 20, color);
-    }
-    
-    void reportErrorWarning(const char *warningString) override
-    {
-        Ogre::LogManager::getSingleton().logMessage(warningString);
-    }
+		//0 for off, anything else for on.
+		void setDebugMode(int isOn) override
+		{
+			mDebugOn = isOn;
 
-    //0 for off, anything else for on.
-    void setDebugMode(int isOn) override
-    {
-        mDebugOn = isOn;
+			if (!mDebugOn)
+				drawer.clear();
+		}
 
-        if (!mDebugOn)
-            drawer.clear();
-    }
+		//0 for off, anything else for on.
+		int	getDebugMode() const override
+		{
+			return mDebugOn;
+		}
 
-    //0 for off, anything else for on.
-    int	getDebugMode() const override
-    {
-        return mDebugOn;
-    }
-
-    void step()
-    {
-        if (mDebugOn)
-        {
-            mWorld->debugDrawWorld();
-            drawer.update();
-        }
-        else
-        {
-            drawer.clear();
-        }
-        stepped = true;
-    }
-};
-
+		void step()
+		{
+			if (mDebugOn)
+			{
+				mWorld->debugDrawWorld();
+				drawer.update();
+			}
+			else
+			{
+				drawer.clear();
+			}
+			stepped = true;
+		}
+	};
 }
 
 #endif
-
-
-
-
-
