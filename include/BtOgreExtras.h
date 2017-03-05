@@ -146,12 +146,10 @@ public:
 	{
 		manualObj->position(l.start);
 		manualObj->colour(l.vertexColor);
-		//manualObj->textureCoord(0, 0);
 		manualObj->index(index++);
 
 		manualObj->position(l.end);
 		manualObj->colour(l.vertexColor);
-		//manualObj->textureCoord(0, 0);
 		manualObj->index(index++);
 	}
 
@@ -165,7 +163,6 @@ class DebugDrawer : public btIDebugDraw
 protected:
     Ogre::SceneNode *mNode;
     btDynamicsWorld *mWorld;
-    //DynamicLines *mLineDrawer;
     int mDebugOn;
     static constexpr char* unlitDatablockName{ "DebugLinesGenerated" };
     const Ogre::IdString unlitDatablockId;
@@ -215,10 +212,6 @@ public:
         Ogre::ColourValue ogreColor(color.x(), color.y(), color.z(), 1);
         ogreColor *= unlitDiffuseMultiplier;
 
-        //std::stringstream out;
-        //out << ogreColor;
-        //Ogre::LogManager::getSingleton().logMessage(out.str());
-
         drawer.addLine(ogreFrom, ogreTo, ogreColor);
     }
 
@@ -239,11 +232,8 @@ public:
     //0 for off, anything else for on.
     void setDebugMode(int isOn) override
     {
-        //mDebugOn = (isOn == 0) ? false : true;
         mDebugOn = isOn;
 
-        //if (!mDebugOn)
-        //	mLineDrawer->clear();
         if (!mDebugOn)
             drawer.clear();
     }
