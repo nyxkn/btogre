@@ -89,7 +89,7 @@ public:
 
 	public:
 		LineDrawer(Ogre::SceneNode* node, Ogre::String datablockId, Ogre::String smgrName) :
-			attachNode(node), index(0),
+			attachNode(node), index(0), manualObject(nullptr),
 			sceneManagerName(smgrName)
 		{
 			smgr = Ogre::Root::getSingleton().getSceneManager(sceneManagerName);
@@ -122,7 +122,7 @@ public:
 
 			if (!createdDatablock)
 			{
-				Ogre::LogManager().logMessage("Mh. Datablock hasn't been created. Weird.");
+				Ogre::LogManager::getSingleton().logMessage("Mh. Datablock hasn't been created. Weird.");
 			}
 		}
 
@@ -130,6 +130,7 @@ public:
 		{
 			if (!manualObject)
 			{
+				Ogre::LogManager::getSingleton().logMessage("Create manual object");
 				manualObject = smgr->createManualObject(Ogre::SCENE_STATIC);
 				attachNode->attachObject(manualObject);
 			}
