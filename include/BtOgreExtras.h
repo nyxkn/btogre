@@ -79,18 +79,26 @@ public:
 		Ogre::String datablockToUse;
 
 		///Array of lines and objects to use
-		//std::vector<Ogre::ManualObject*> objects;
-		Ogre::ManualObject* manualObject;
 		std::vector<line> lines;
 
+		///Manual object used to display the lines
+		Ogre::ManualObject* manualObject;
+
+		///Pointer to the scene manager containing the physics objects
 		Ogre::SceneManager* smgr;
 
+		///Vertex index
 		int index;
 
 	public:
+
+		///Construct the line drawer, need the name of the scene manager and the datablock (material)
 		LineDrawer(Ogre::SceneNode* node, Ogre::String datablockId, Ogre::String smgrName) :
-			attachNode(node), index(0), manualObject(nullptr),
-			sceneManagerName(smgrName)
+			sceneManagerName(smgrName),
+			attachNode(node),
+			datablockToUse(datablockId),
+			manualObject(nullptr),
+			index(0)
 		{
 			smgr = Ogre::Root::getSingleton().getSceneManager(sceneManagerName);
 		}
@@ -98,19 +106,23 @@ public:
 		~LineDrawer()
 		{
 			clear();
+			smgr->destroyManualObject(manualObject);
 		}
 
+		///Clear the manual object AND the line buffer
 		void clear()
 		{
 			if (manualObject) manualObject->clear();
 			lines.clear();
 		}
 
+		///Add a line to the "line buffer", the list of lines that will be shown at next update
 		void addLine(const Ogre::Vector3& start, const Ogre::Vector3& end, const Ogre::ColourValue& value)
 		{
 			lines.push_back({ start, end, value });
 		}
 
+		///Check if the material actually exist, if it doesn't create it
 		void checkForMaterial()
 		{
 			Ogre::HlmsUnlit* hlmsUnlit = (Ogre::HlmsUnlit*) Ogre::Root::getSingleton().getHlmsManager()->getHlms(Ogre::HLMS_UNLIT);
@@ -126,6 +138,7 @@ public:
 			}
 		}
 
+		///Update the content of the manual object with the line buffer
 		void update()
 		{
 			if (!manualObject)
@@ -139,6 +152,7 @@ public:
 			checkForMaterial();
 			manualObject->begin(datablockToUse, Ogre::OT_LINE_LIST);
 			index = 0;
+
 			for (const auto& l : lines)
 			{
 				manualObject->position(l.start);
@@ -171,12 +185,16 @@ public:
 		LineDrawer drawer;
 
 	public:
+		///Debug drawer of Bullet.
+		/// \param node SceneNode (usually the Root node) where the lines will be attached. A static child node will be created
+		/// \param world Pointer to the btDynamicsWolrd you're using
+		/// \param smgrName Name of the scene manager you are using
 		DebugDrawer(Ogre::SceneNode* node, btDynamicsWorld* world, Ogre::String smgrName = "MAIN_SMGR") :
 			mNode(node->createChildSceneNode(Ogre::SCENE_STATIC)),
 			mWorld(world),
 			mDebugOn(true),
 			unlitDatablockId(unlitDatablockName),
-			unlitDiffuseMultiplier(200.0f),
+			unlitDiffuseMultiplier(1),
 			stepped(false),
 			scene(smgrName),
 			drawer(mNode, unlitDatablockName, scene)
@@ -189,11 +207,13 @@ public:
 		{
 		}
 
+		///Set the value to multiply the texure. >= 1. Usefull only for HDR rendering
 		void setUnlitDiffuseMultiplier(float value)
 		{
 			if (value >= 1) unlitDiffuseMultiplier = value;
 		}
 
+		///For bullet : add a line to the drawer
 		void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override
 		{
 			if (stepped)
@@ -210,21 +230,24 @@ public:
 			drawer.addLine(ogreFrom, ogreTo, ogreColor);
 		}
 
+		///Dummy. Rendering text is hard :D
 		void draw3dText(const btVector3 &location, const char *textString) override
 		{
 		}
 
+		///Just render the contact point wit a line
 		void drawContactPoint(const btVector3 &PointOnB, const btVector3 &normalOnB, btScalar distance, int lifeTime, const btVector3 &color) override
 		{
 			drawLine(PointOnB, PointOnB + normalOnB * distance * 20, color);
 		}
 
+		///Redirect erros to the Ogre default log
 		void reportErrorWarning(const char *warningString) override
 		{
 			Ogre::LogManager::getSingleton().logMessage(warningString);
 		}
 
-		//0 for off, anything else for on.
+		///Set the debug mode. Acceptable values are combinations of the flags defined by btIDebugDraw::DebugDrawModes
 		void setDebugMode(int isOn) override
 		{
 			mDebugOn = isOn;
@@ -233,12 +256,12 @@ public:
 				drawer.clear();
 		}
 
-		//0 for off, anything else for on.
 		int	getDebugMode() const override
 		{
 			return mDebugOn;
 		}
 
+		///Step the debug drawer
 		void step()
 		{
 			if (mDebugOn)
@@ -256,3 +279,4 @@ public:
 }
 
 #endif
+
