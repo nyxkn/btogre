@@ -132,6 +132,7 @@ public:
 			{
 				Ogre::LogManager::getSingleton().logMessage("Create manual object");
 				manualObject = smgr->createManualObject(Ogre::SCENE_STATIC);
+				manualObject->setCastShadows(false);
 				attachNode->attachObject(manualObject);
 			}
 
@@ -150,7 +151,6 @@ public:
 			}
 
 			manualObject->end();
-			manualObject->setCastShadows(false);
 		}
 	};
 
