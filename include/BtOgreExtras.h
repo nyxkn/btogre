@@ -106,7 +106,8 @@ public:
 		~LineDrawer()
 		{
 			clear();
-			smgr->destroyManualObject(manualObject);
+			if (manualObject)
+				smgr->destroyManualObject(manualObject);
 		}
 
 		///Clear the manual object AND the line buffer
